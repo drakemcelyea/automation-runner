@@ -10,14 +10,10 @@ import shutil
 import json
 import time
 import subprocess
+import pam
 import os
 from pathlib import Path
 from datetime import datetime
-
-from app.db import Base, SessionLocal, engine
-from app.models import User
-from app.security import verify_password
-from app.user_service import get_user_by_username, record_login
 
 from app.config import (
     APP_DIR,
@@ -35,19 +31,14 @@ from app.config import (
 
 app = FastAPI()
 
-SESSION_SECRET = os.getenv(
-    "SESSION_SECRET",
-    "CHANGE_THIS_TO_A_LONG_RANDOM_SECRET",
-)
-
 app.add_middleware(
     SessionMiddleware,
-    secret_key=SESSION_SECRET,
+    secret_key="CHANGE_THIS_TO_A_LONG_RANDOM_SECRET",
     same_site="lax",
     https_only=False,
 )
 
-Base.metadata.create_all(bind=engine)
+pam_auth = pam.pam()
 
 app.mount(
     "/static",
@@ -268,40 +259,18 @@ def health():
 
 @app.post("/login")
 def login(request: Request, payload: dict = Body(...)):
-    username = str(payload.get("username", "")).strip().lower()
-    password = str(payload.get("password", ""))
+    username = payload.get("username")
+    password = payload.get("password")
 
     if not username or not password:
-        return {
-            "status": "error",
-            "message": "Missing credentials",
-        }
+        return {"status": "error", "message": "Missing credentials"}
 
-    with SessionLocal() as db:
-        user = get_user_by_username(db, username)
+    if pam_auth.authenticate(username, password, service="login"):
+        request.session["user"] = username
+        return {"status": "ok", "user": username}
 
-        if (
-            user is None
-            or not user.enabled
-            or not verify_password(password, user.password_hash)
-        ):
-            return {
-                "status": "error",
-                "message": "Invalid credentials",
-            }
+    return {"status": "error", "message": "Invalid credentials"}
 
-        record_login(db, user)
-
-        request.session.clear()
-        request.session["user"] = user.username
-        request.session["user_id"] = user.id
-        request.session["role"] = user.role
-
-        return {
-            "status": "ok",
-            "user": user.username,
-            "role": user.role,
-        }
 
 @app.get("/logout")
 def logout(request: Request):
@@ -311,19 +280,13 @@ def logout(request: Request):
 
 @app.get("/me")
 def me(request: Request):
-    username = request.session.get("user")
+    user = request.session.get("user")
 
-    if not username:
-        return {
-            "authenticated": False,
-        }
+    if not user:
+        return {"authenticated": False}
 
-    return {
-        "authenticated": True,
-        "user": username,
-        "user_id": request.session.get("user_id"),
-        "role": request.session.get("role"),
-    }
+    return {"authenticated": True, "user": user}
+
 
 @app.get("/runs")
 def list_runs():

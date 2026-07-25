@@ -34,3 +34,5 @@ typing-inspection==0.4.2
 typing_extensions==4.15.0
 uvicorn==0.39.0
 zipp==3.23.1
+SQLAlchemy>=2.0,<3.0
+pwdlib[argon2]
