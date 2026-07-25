@@ -1,0 +1,27 @@
+FROM registry.access.redhat.com/ubi9/python-311:latest
+
+USER root
+
+WORKDIR /opt/automation-runner
+
+COPY container/backend/requirements.txt ./requirements.txt
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+RUN mkdir -p \
+      /var/lib/automation-runner/home/.ansible/tmp \
+      /var/lib/automation-runner/runs \
+      /var/lib/automation-runner/projects/demo/project \
+    && chmod -R 0770 /var/lib/automation-runner
+
+COPY app ./app
+COPY run.py ./run.py
+
+EXPOSE 8000
+
+ENV HOME=/var/lib/automation-runner/home \
+    ANSIBLE_HOME=/var/lib/automation-runner/home/.ansible \
+    ANSIBLE_LOCAL_TEMP=/var/lib/automation-runner/home/.ansible/tmp \
+    ANSIBLE_REMOTE_TEMP=/tmp/.ansible-${USER}/tmp
+
+CMD ["python", "run.py"]

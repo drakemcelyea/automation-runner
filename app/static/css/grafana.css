@@ -1,0 +1,130 @@
+:root {
+    --gf-bg: #0b0f14;
+    --gf-panel: #111827;
+    --gf-panel-2: #161b22;
+    --gf-border: #2b3440;
+    --gf-text: #d8dee9;
+    --gf-muted: #8b949e;
+    --gf-blue: #5794f2;
+    --gf-green: #73bf69;
+    --gf-red: #f2495c;
+    --gf-yellow: #fade2a;
+}
+
+body {
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+html[data-bs-theme="dark"] body,
+body.grafana {
+    background: var(--gf-bg) !important;
+    color: var(--gf-text);
+}
+
+body.grafana .navbar {
+    background: #070a0f !important;
+    border-bottom: 1px solid var(--gf-border);
+}
+
+body.grafana #sidebar {
+    background: #0f141b !important;
+    border-right: 1px solid var(--gf-border) !important;
+}
+
+body.grafana .list-group-item {
+    background: transparent;
+    color: var(--gf-muted);
+    border: 0;
+    border-radius: 8px;
+    margin-bottom: 6px;
+}
+
+body.grafana .list-group-item.active,
+body.grafana .list-group-item:hover {
+    background: #1f2937;
+    color: var(--gf-blue);
+}
+
+body.grafana .card {
+    background: var(--gf-panel);
+    color: var(--gf-text);
+    border: 1px solid var(--gf-border);
+    border-radius: 10px;
+    box-shadow: none !important;
+}
+
+body.grafana .card-header {
+    background: var(--gf-panel-2);
+    color: var(--gf-text);
+    border-bottom: 1px solid var(--gf-border);
+}
+
+body.grafana .text-muted {
+    color: var(--gf-muted) !important;
+}
+
+body.grafana .form-control,
+body.grafana .form-select,
+body.grafana textarea {
+    background: #0b0f14;
+    color: var(--gf-text);
+    border: 1px solid var(--gf-border);
+}
+
+body.grafana .form-control:focus,
+body.grafana .form-select:focus,
+body.grafana textarea:focus {
+    background: #0b0f14;
+    color: var(--gf-text);
+    border-color: var(--gf-blue);
+    box-shadow: 0 0 0 0.15rem rgba(87, 148, 242, 0.25);
+}
+
+body.grafana pre {
+    background: #05070a !important;
+    color: #d8dee9 !important;
+    border: 1px solid var(--gf-border);
+}
+
+body.grafana table {
+    color: var(--gf-text);
+}
+
+body.grafana .table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--gf-text);
+    --bs-table-border-color: var(--gf-border);
+}
+
+.gf-stat {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.gf-panel-title {
+    font-size: 0.85rem;
+    color: var(--gf-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.gf-success {
+    color: var(--gf-green);
+}
+
+.gf-danger {
+    color: var(--gf-red);
+}
+
+.gf-warning {
+    color: var(--gf-yellow);
+}
+
+.gf-blue {
+    color: var(--gf-blue);
+}
+
+.gf-output {
+    font-family: Consolas, Monaco, monospace;
+    font-size: 0.9rem;
+}

@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Virtual environments
+venv/
+.venv/
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+*.crt
+vault-password*
+admin_secret.yml
+
+# Runtime data
+runs/
+artifacts/
+*.log
+*.pid
+*.sock
+
+# Local data/config copies
+inventory.json
+settings.json
+runs.json
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Container exports
+*.tar
+*.tar.gz
+*.img
