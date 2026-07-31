@@ -44,6 +44,140 @@ function showTab(tab, btn) {
     }
 }
 
+function showRegisterForm() {
+    const loginForm = document.getElementById("login-form");
+    const registerForm = document.getElementById("register-form");
+
+    loginForm.classList.add("d-none");
+    registerForm.classList.remove("d-none");
+
+    document.getElementById("login-error").innerText = "";
+
+    const registerMessage =
+        document.getElementById("register-message");
+
+    registerMessage.innerText = "";
+    registerMessage.className = "mt-2";
+
+    document.getElementById("register-user").focus();
+}
+
+
+function showLoginForm() {
+    const loginForm = document.getElementById("login-form");
+    const registerForm = document.getElementById("register-form");
+
+    registerForm.classList.add("d-none");
+    loginForm.classList.remove("d-none");
+
+    document.getElementById("login-error").innerText = "";
+
+    const registerMessage =
+        document.getElementById("register-message");
+
+    registerMessage.innerText = "";
+    registerMessage.className = "mt-2";
+
+    document.getElementById("login-user").focus();
+}
+
+
+function registerAccount() {
+    const username = document
+        .getElementById("register-user")
+        .value
+        .trim();
+
+    const password = document
+        .getElementById("register-pass")
+        .value;
+
+    const confirmPassword = document
+        .getElementById("register-confirm-pass")
+        .value;
+
+    const message =
+        document.getElementById("register-message");
+
+    const button =
+        document.getElementById("register-btn");
+
+    message.className = "mt-2";
+    message.innerText = "";
+
+    if (!username || !password || !confirmPassword) {
+        message.className = "text-danger mt-2";
+        message.innerText = "All fields are required.";
+        return;
+    }
+
+    if (password.length < 12) {
+        message.className = "text-danger mt-2";
+        message.innerText =
+            "Password must be at least 12 characters.";
+        return;
+    }
+
+    if (password !== confirmPassword) {
+        message.className = "text-danger mt-2";
+        message.innerText = "Passwords do not match.";
+        return;
+    }
+
+    button.disabled = true;
+    button.innerText = "Creating Account...";
+
+    fetch("/register", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            username: username,
+            password: password,
+            confirm_password: confirmPassword
+        })
+    })
+    .then(async response => {
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data.message || "Registration failed"
+            );
+        }
+
+        return data;
+    })
+    .then(data => {
+        if (data.status !== "ok") {
+            message.className = "text-danger mt-2";
+            message.innerText =
+                data.message || "Registration failed";
+            return;
+        }
+
+        message.className = "text-success mt-2";
+        message.innerText = data.message;
+
+        document.getElementById("register-user").value = "";
+        document.getElementById("register-pass").value = "";
+        document.getElementById(
+            "register-confirm-pass"
+        ).value = "";
+    })
+    .catch(error => {
+        message.className = "text-danger mt-2";
+        message.innerText = error.message;
+    })
+    .finally(() => {
+        button.disabled = false;
+        button.innerText = "Create Account";
+    });
+}
+
+
+
 function login() {
     document.getElementById("login-error").innerText = "";
 
@@ -656,5 +790,42 @@ setInterval(() => {
         loadRuns();
     }
 }, 10000);
+
+document
+    .getElementById("login-pass")
+    .addEventListener("keydown", event => {
+        if (event.key === "Enter") {
+            login();
+        }
+    });
+
+
+document
+    .getElementById("register-confirm-pass")
+    .addEventListener("keydown", event => {
+        if (event.key === "Enter") {
+            registerAccount();
+        }
+    });
+
+const showRegisterButton =
+    document.getElementById("show-register-btn");
+
+if (showRegisterButton) {
+    showRegisterButton.addEventListener(
+        "click",
+        showRegisterForm
+    );
+}
+
+const showLoginButton =
+    document.getElementById("show-login-btn");
+
+if (showLoginButton) {
+    showLoginButton.addEventListener(
+        "click",
+        showLoginForm
+    );
+}
 
 checkSession();

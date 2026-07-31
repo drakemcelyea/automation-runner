@@ -39,6 +39,7 @@ def create_user(
     username: str,
     password: str,
     role: str = "viewer",
+    enabled: bool = True,
 ) -> User:
     normalized = normalize_username(username)
 
@@ -55,7 +56,7 @@ def create_user(
         username=normalized,
         password_hash=hash_password(password),
         role=role,
-        enabled=True,
+        enabled=enabled,
     )
 
     db.add(user)
@@ -63,7 +64,6 @@ def create_user(
     db.refresh(user)
 
     return user
-
 
 def record_login(
     db: Session,

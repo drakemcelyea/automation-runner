@@ -17,7 +17,13 @@ from datetime import datetime
 from app.db import Base, SessionLocal, engine
 from app.models import User
 from app.security import verify_password
-from app.user_service import get_user_by_username, record_login
+
+from app.user_service import (
+    create_user,
+    get_user_by_username,
+    normalize_username,
+    record_login,
+)
 
 from app.config import (
     APP_DIR,
@@ -736,6 +742,79 @@ def test_vault():
         "output": "Vault decrypted successfully." if result.returncode == 0 else result.stdout + result.stderr,
     }
 
+
+@app.post("/register")
+def register(payload: dict = Body(...)):
+    username = normalize_username(
+        str(payload.get("username", ""))
+    )
+    password = str(payload.get("password", ""))
+    confirm_password = str(
+        payload.get("confirm_password", "")
+    )
+
+    if not username:
+        return {
+            "status": "error",
+            "message": "Username is required",
+        }
+
+    if len(username) < 3:
+        return {
+            "status": "error",
+            "message": "Username must be at least 3 characters",
+        }
+
+    if len(username) > 50:
+        return {
+            "status": "error",
+            "message": "Username cannot exceed 50 characters",
+        }
+
+    if not username.replace("_", "").replace("-", "").isalnum():
+        return {
+            "status": "error",
+            "message": (
+                "Username may only contain letters, numbers, "
+                "underscores, and hyphens"
+            ),
+        }
+
+    if len(password) < 12:
+        return {
+            "status": "error",
+            "message": "Password must be at least 12 characters",
+        }
+
+    if password != confirm_password:
+        return {
+            "status": "error",
+            "message": "Passwords do not match",
+        }
+
+    with SessionLocal() as db:
+        try:
+            user = create_user(
+                db=db,
+                username=username,
+                password=password,
+                role="viewer",
+                enabled=False,
+            )
+        except ValueError as exc:
+            return {
+                "status": "error",
+                "message": str(exc),
+            }
+
+        return {
+            "status": "ok",
+            "message": (
+                "Account created. An administrator must approve "
+                "the account before you can sign in."
+            ),
+            "user": user.username,
+        }
 
 @app.get("/ui", response_class=HTMLResponse)
 def ui(request: Request):
