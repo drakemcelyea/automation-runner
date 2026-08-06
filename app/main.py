@@ -6,7 +6,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import STATIC_DIR
 from app.db import Base, engine
-from app.routers import auth, health, inventory, playbooks, runs, settings, ui, vault
+from app.routers import auth, health, inventory, playbooks, runs, settings, ui, users, vault
 
 
 def create_app() -> FastAPI:
@@ -34,6 +34,7 @@ def create_app() -> FastAPI:
     application.include_router(runs.router)
     application.include_router(settings.router)
     application.include_router(vault.router)
+    application.include_router(users.router)
     application.include_router(ui.router)
 
     return application

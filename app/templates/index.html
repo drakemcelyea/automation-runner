@@ -27,7 +27,8 @@
                 <button class="list-group-item list-group-item-action" onclick="showTab('inventory', this)">Inventory</button>
                 <button class="list-group-item list-group-item-action" onclick="showTab('playbooks', this)">Playbooks</button>
                 <button class="list-group-item list-group-item-action" onclick="showTab('runs', this)">Runs</button>
-                <button class="list-group-item list-group-item-action" onclick="showTab('settings', this)">Settings</button>
+                <button class="list-group-item list-group-item-action d-none" data-role="admin" onclick="showTab('settings', this)">Settings</button>
+                <button class="list-group-item list-group-item-action d-none" data-role="admin" onclick="showTab('users', this)">Users</button>
             </div>
         </aside>
 
@@ -195,7 +196,7 @@
                         </div>
 
                         <div class="col-lg-5">
-                            <div class="card h-100">
+                            <div class="card h-100 d-none" data-role="operator">
                                 <div class="card-header fw-semibold">Run Playbook</div>
                                 <div class="card-body">
                                     <label class="form-label text-muted small">Playbook</label>
@@ -230,7 +231,7 @@
                     <h3>Inventory</h3>
                     <p class="text-muted">Manage hosts used to generate the Ansible inventory.</p>
 
-                    <div class="card mb-3">
+                    <div class="card mb-3 d-none" data-role="admin">
                         <div class="card-header fw-semibold">Add Host</div>
                         <div class="card-body">
                             <div class="row g-2">
@@ -282,9 +283,9 @@
                                 <div class="card-body">
                                     <input id="playbook-name" class="form-control mb-2" placeholder="playbook.yml">
                                     <textarea id="playbook-editor" class="form-control font-monospace mb-2" style="height: 360px;"></textarea>
-                                    <button class="btn btn-primary accent-btn" onclick="savePlaybook()">Save</button>
-                                    <button class="btn btn-success" onclick="syntaxCheck()">Syntax</button>
-                                    <button class="btn btn-outline-danger" onclick="deletePlaybook()">Delete</button>
+                                    <button class="btn btn-primary accent-btn d-none" data-role="admin" onclick="savePlaybook()">Save</button>
+                                    <button class="btn btn-success d-none" data-role="operator" onclick="syntaxCheck()">Syntax</button>
+                                    <button class="btn btn-outline-danger d-none" data-role="admin" onclick="deletePlaybook()">Delete</button>
                                     <pre id="syntax-output" class="gf-output p-2 mt-2 rounded overflow-auto" style="max-height: 220px;">No output.</pre>
                                 </div>
                             </div>
@@ -298,13 +299,32 @@
                             <h3 class="mb-0">Runs</h3>
                             <div class="text-muted">Historical playbook execution results.</div>
                         </div>
-                        <button class="btn btn-outline-danger btn-sm" onclick="clearRuns()">Clear History</button>
+                        <button class="btn btn-outline-danger btn-sm d-none" data-role="admin" onclick="clearRuns()">Clear History</button>
                     </div>
 
                     <div class="card">
                         <div class="card-header fw-semibold">Run History</div>
                         <div class="card-body">
                             <div id="run-history" class="table-responsive"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-users" class="tab-section d-none">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h3 class="mb-0">Users</h3>
+                            <div class="text-muted">Approve accounts and assign platform roles.</div>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="loadUsers()">Refresh</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header fw-semibold">User Accounts</div>
+                        <div class="card-body">
+                            <div id="users-table" class="table-responsive">
+                                <div class="text-muted">Loading users...</div>
+                            </div>
                         </div>
                     </div>
                 </div>

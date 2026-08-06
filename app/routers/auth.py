@@ -4,6 +4,7 @@ from app.db import SessionLocal
 from app.security.passwords import verify_password
 from app.services.user_service import (
     create_user,
+    get_user_by_id,
     get_user_by_username,
     normalize_username,
     record_login,
@@ -21,24 +22,17 @@ def register(payload: dict = Body(...)):
 
     if not username:
         return {"status": "error", "message": "Username is required"}
-
     if len(username) < 3:
         return {"status": "error", "message": "Username must be at least 3 characters"}
-
     if len(username) > 50:
         return {"status": "error", "message": "Username cannot exceed 50 characters"}
-
     if not username.replace("_", "").replace("-", "").isalnum():
         return {
             "status": "error",
-            "message": (
-                "Username may only contain letters, numbers, underscores, and hyphens"
-            ),
+            "message": "Username may only contain letters, numbers, underscores, and hyphens",
         }
-
     if len(password) < 12:
         return {"status": "error", "message": "Password must be at least 12 characters"}
-
     if password != confirm_password:
         return {"status": "error", "message": "Passwords do not match"}
 
@@ -56,10 +50,7 @@ def register(payload: dict = Body(...)):
 
     return {
         "status": "ok",
-        "message": (
-            "Account created. An administrator must approve the account "
-            "before you can sign in."
-        ),
+        "message": "Account created. An administrator must approve the account before you can sign in.",
         "user": user.username,
     }
 
@@ -84,7 +75,12 @@ def login(request: Request, payload: dict = Body(...)):
         request.session["user_id"] = user.id
         request.session["role"] = user.role
 
-        return {"status": "ok", "user": user.username, "role": user.role}
+        return {
+            "status": "ok",
+            "user": user.username,
+            "user_id": user.id,
+            "role": user.role,
+        }
 
 
 @router.get("/logout")
@@ -95,14 +91,23 @@ def logout(request: Request):
 
 @router.get("/me")
 def me(request: Request):
-    username = request.session.get("user")
+    user_id = request.session.get("user_id")
 
-    if not username:
+    if not user_id:
         return {"authenticated": False}
 
-    return {
-        "authenticated": True,
-        "user": username,
-        "user_id": request.session.get("user_id"),
-        "role": request.session.get("role"),
-    }
+    with SessionLocal() as db:
+        user = get_user_by_id(db, user_id)
+
+        if user is None or not user.enabled:
+            request.session.clear()
+            return {"authenticated": False}
+
+        request.session["user"] = user.username
+        request.session["role"] = user.role
+        return {
+            "authenticated": True,
+            "user": user.username,
+            "user_id": user.id,
+            "role": user.role,
+        }

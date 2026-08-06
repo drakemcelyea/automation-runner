@@ -1,9 +1,14 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from app.security.permissions import require_admin
 from app.services.vault_service import save_vault, test_vault, vault_status
 
 
-router = APIRouter(prefix="/vault", tags=["vault"])
+router = APIRouter(
+    prefix="/vault",
+    tags=["vault"],
+    dependencies=[Depends(require_admin)],
+)
 
 
 @router.get("/status")

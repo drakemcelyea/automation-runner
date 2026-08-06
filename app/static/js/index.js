@@ -3,6 +3,8 @@ let runsChart = null;
 let pendingPlaybook = null;
 let pendingTarget = "all";
 let pendingExtraVars = "";
+let currentUserRole = "viewer";
+let currentUserId = null;
 
 function showView(view) {
     document.querySelectorAll(".view").forEach(e => e.classList.add("d-none"));
@@ -42,6 +44,30 @@ function showTab(tab, btn) {
         loadSettings();
         loadVaultStatus();
     }
+    if (tab === "users") loadUsers();
+}
+
+
+function roleAllows(requiredRole) {
+    const levels = {viewer: 10, operator: 20, admin: 30};
+    return (levels[currentUserRole] || 0) >= (levels[requiredRole] || 0);
+}
+
+function applyRoleUi(role) {
+    currentUserRole = role || "viewer";
+
+    document.querySelectorAll("[data-role]").forEach(element => {
+        const allowed = roleAllows(element.dataset.role);
+        element.classList.toggle("d-none", !allowed);
+    });
+}
+
+async function responseJson(response) {
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.detail || data.message || "Request failed");
+    }
+    return data;
 }
 
 function showRegisterForm() {
@@ -192,7 +218,9 @@ function login() {
     .then(res => res.json())
     .then(data => {
         if (data.status === "ok") {
-            document.getElementById("user-label").innerText = "Signed in as " + data.user;
+            currentUserId = data.user_id;
+            applyRoleUi(data.role);
+            document.getElementById("user-label").innerText = "Signed in as " + data.user + " (" + data.role + ")";
             showView("app");
             init();
         } else {
@@ -207,6 +235,8 @@ function login() {
 function logout() {
     fetch("/logout")
         .then(() => {
+            currentUserId = null;
+            applyRoleUi("viewer");
             document.getElementById("user-label").innerText = "";
             showView("login");
         });
@@ -220,6 +250,7 @@ function init() {
     loadTargetGroups();
     loadRuns();
     loadInventory();
+    if (currentUserRole === "admin") loadUsers();
 }
 
 function checkHealth() {
@@ -347,8 +378,10 @@ function loadInventory() {
                                 </td>
                                 <td>${h.created_at || ""}</td>
                                 <td class="text-end">
+                                    ${currentUserRole === "admin" ? `
                                     <button class="btn btn-sm btn-outline-secondary" onclick="toggleHost('${h.id}')">Toggle</button>
                                     <button class="btn btn-sm btn-outline-danger" onclick="deleteHost('${h.id}')">Delete</button>
+                                    ` : ""}
                                 </td>
                             </tr>
                         `).join("")}
@@ -674,12 +707,122 @@ function testVault() {
         });
 }
 
+
+function userStatus(user) {
+    if (user.enabled) return '<span class="badge text-bg-success">Enabled</span>';
+    if (!user.last_login) return '<span class="badge text-bg-warning">Pending</span>';
+    return '<span class="badge text-bg-secondary">Disabled</span>';
+}
+
+function formatUserDate(value) {
+    if (!value) return "Never";
+    return new Date(value).toLocaleString();
+}
+
+function loadUsers() {
+    if (currentUserRole !== "admin") return;
+
+    fetch("/users")
+        .then(responseJson)
+        .then(data => {
+            const container = document.getElementById("users-table");
+            container.innerHTML = `
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Last Login</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.users.map(user => `
+                            <tr>
+                                <td><strong>${user.username}</strong>${user.id === currentUserId ? ' <span class="badge text-bg-info">You</span>' : ''}</td>
+                                <td>
+                                    <select class="form-select form-select-sm" onchange="changeUserRole(${user.id}, this.value)" ${user.id === currentUserId ? "disabled" : ""}>
+                                        <option value="viewer" ${user.role === "viewer" ? "selected" : ""}>Viewer</option>
+                                        <option value="operator" ${user.role === "operator" ? "selected" : ""}>Operator</option>
+                                        <option value="admin" ${user.role === "admin" ? "selected" : ""}>Admin</option>
+                                    </select>
+                                </td>
+                                <td>${userStatus(user)}</td>
+                                <td>${formatUserDate(user.created_at)}</td>
+                                <td>${formatUserDate(user.last_login)}</td>
+                                <td class="text-end">
+                                    ${!user.enabled ? `<button class="btn btn-sm btn-success" onclick="approveUser(${user.id})">Approve</button>` : ""}
+                                    ${user.enabled && user.id !== currentUserId ? `<button class="btn btn-sm btn-outline-secondary" onclick="disableUser(${user.id})">Disable</button>` : ""}
+                                    ${user.id !== currentUserId ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteUserAccount(${user.id}, '${user.username}')">Delete</button>` : ""}
+                                </td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            `;
+        })
+        .catch(error => showToast(error.message));
+}
+
+function approveUser(userId) {
+    fetch(`/users/${userId}/approve`, {method: "POST"})
+        .then(responseJson)
+        .then(() => {
+            showToast("Account approved");
+            loadUsers();
+        })
+        .catch(error => showToast(error.message));
+}
+
+function disableUser(userId) {
+    fetch(`/users/${userId}/disable`, {method: "POST"})
+        .then(responseJson)
+        .then(() => {
+            showToast("Account disabled");
+            loadUsers();
+        })
+        .catch(error => showToast(error.message));
+}
+
+function changeUserRole(userId, role) {
+    fetch(`/users/${userId}/role`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({role})
+    })
+        .then(responseJson)
+        .then(() => {
+            showToast("Role updated");
+            loadUsers();
+        })
+        .catch(error => {
+            showToast(error.message);
+            loadUsers();
+        });
+}
+
+function deleteUserAccount(userId, username) {
+    if (!confirm(`Delete account ${username}?`)) return;
+
+    fetch(`/users/${userId}`, {method: "DELETE"})
+        .then(responseJson)
+        .then(() => {
+            showToast("Account deleted");
+            loadUsers();
+        })
+        .catch(error => showToast(error.message));
+}
+
 function checkSession() {
     fetch("/me")
         .then(r => r.json())
         .then(d => {
             if (d.authenticated) {
-                document.getElementById("user-label").innerText = "Signed in as " + d.user;
+                currentUserId = d.user_id;
+                applyRoleUi(d.role);
+                document.getElementById("user-label").innerText = "Signed in as " + d.user + " (" + d.role + ")";
                 showView("app");
                 init();
             } else {
