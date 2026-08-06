@@ -1,17 +1,17 @@
 FROM registry.access.redhat.com/ubi9/python-311:latest
 
 USER root
-
 WORKDIR /opt/automation-runner
 
 COPY container/backend/requirements.txt ./requirements.txt
-
 RUN pip install --no-cache-dir -r requirements.txt
 
 RUN mkdir -p \
       /var/lib/automation-runner/home/.ansible/tmp \
       /var/lib/automation-runner/runs \
       /var/lib/automation-runner/projects/demo/project \
+      /var/lib/automation-runner/settings \
+      /var/lib/automation-runner/vault \
     && chmod -R 0770 /var/lib/automation-runner
 
 COPY app ./app

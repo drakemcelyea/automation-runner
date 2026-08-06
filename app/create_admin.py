@@ -4,20 +4,14 @@ import sys
 
 from app.db import Base, SessionLocal, engine
 from app.models import User  # noqa: F401
-from app.user_service import create_user
+from app.services.user_service import create_user
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Create an Automation Runner administrator"
     )
-
-    parser.add_argument(
-        "--username",
-        required=True,
-        help="Administrator username",
-    )
-
+    parser.add_argument("--username", required=True, help="Administrator username")
     args = parser.parse_args()
 
     password = getpass.getpass("Password: ")
@@ -28,10 +22,7 @@ def main() -> int:
         return 1
 
     if len(password) < 12:
-        print(
-            "Password must contain at least 12 characters.",
-            file=sys.stderr,
-        )
+        print("Password must contain at least 12 characters.", file=sys.stderr)
         return 1
 
     Base.metadata.create_all(bind=engine)
@@ -48,11 +39,7 @@ def main() -> int:
             print(str(exc), file=sys.stderr)
             return 1
 
-    print(
-        f"Created administrator '{user.username}' "
-        f"with ID {user.id}."
-    )
-
+    print(f"Created administrator '{user.username}' with ID {user.id}.")
     return 0
 
 
