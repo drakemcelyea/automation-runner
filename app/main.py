@@ -5,7 +5,6 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import STATIC_DIR
-from app.db import Base, engine
 from app.routers import audit, auth, health, inventory, playbooks, runs, settings, ui, users, vault
 
 
@@ -24,7 +23,6 @@ def create_app() -> FastAPI:
         https_only=False,
     )
 
-    Base.metadata.create_all(bind=engine)
     application.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     application.include_router(health.router)

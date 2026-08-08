@@ -35,3 +35,4 @@ uvicorn==0.39.0
 zipp==3.23.1
 SQLAlchemy>=2.0,<3.0
 pwdlib[argon2]
+alembic>=1.13,<2.0
