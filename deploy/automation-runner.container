@@ -1,0 +1,25 @@
+[Unit]
+Description=Automation Runner
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+Image=localhost/automation-runner:latest
+ContainerName=automation-runner
+PublishPort=8080:8000
+EnvironmentFile=/etc/automation-runner/automation-runner.env
+Volume=/var/lib/automation-runner/settings:/var/lib/automation-runner/settings:Z
+Volume=/var/lib/automation-runner/projects:/var/lib/automation-runner/projects:Z
+Volume=/var/lib/automation-runner/runs:/var/lib/automation-runner/runs:Z
+Volume=/var/lib/automation-runner/vault:/var/lib/automation-runner/vault:Z
+Volume=/var/lib/automation-runner/home:/var/lib/automation-runner/home:Z
+Volume=/var/lib/automation-runner/inventory.json:/var/lib/automation-runner/inventory.json:Z
+Volume=/var/lib/automation-runner/runs.json:/var/lib/automation-runner/runs.json:Z
+Volume=/var/lib/automation-runner/settings.json:/var/lib/automation-runner/settings.json:Z
+
+[Service]
+Restart=always
+TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target
