@@ -39,6 +39,8 @@ def serialize_user(user: User) -> dict:
         "enabled": user.enabled,
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "last_login": user.last_login.isoformat() if user.last_login else None,
+        "failed_login_attempts": int(user.failed_login_attempts or 0),
+        "locked_until": user.locked_until.isoformat() if user.locked_until else None,
     }
 
 
@@ -107,5 +109,7 @@ def count_enabled_admins(db: Session) -> int:
 
 def record_login(db: Session, user: User) -> None:
     user.last_login = datetime.now(timezone.utc)
+    user.failed_login_attempts = 0
+    user.locked_until = None
     db.add(user)
     db.commit()

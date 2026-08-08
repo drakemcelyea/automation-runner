@@ -6,6 +6,55 @@ let pendingExtraVars = "";
 let currentUserRole = "viewer";
 let currentUserId = null;
 
+let csrfToken = null;
+const nativeFetch = window.fetch.bind(window);
+
+function setCsrfToken(token) {
+    csrfToken = token || null;
+}
+
+async function refreshCsrfToken() {
+    const response = await nativeFetch("/csrf-token", {
+        method: "GET",
+        credentials: "same-origin"
+    });
+
+    if (!response.ok) {
+        throw new Error("Unable to establish CSRF session");
+    }
+
+    const data = await response.json();
+    setCsrfToken(data.csrf_token);
+    return csrfToken;
+}
+
+window.fetch = async function(input, init = {}) {
+    const method = (init.method || "GET").toUpperCase();
+    const unsafe = !["GET", "HEAD", "OPTIONS", "TRACE"].includes(method);
+    let options = {...init, credentials: init.credentials || "same-origin"};
+
+    if (unsafe) {
+        if (!csrfToken) {
+            await refreshCsrfToken();
+        }
+
+        const headers = new Headers(options.headers || {});
+        headers.set("X-CSRF-Token", csrfToken);
+        options.headers = headers;
+    }
+
+    let response = await nativeFetch(input, options);
+
+    if (unsafe && response.status === 403 && response.headers.get("X-CSRF-Error") === "1") {
+        await refreshCsrfToken();
+        const retryHeaders = new Headers(options.headers || {});
+        retryHeaders.set("X-CSRF-Token", csrfToken);
+        response = await nativeFetch(input, {...options, headers: retryHeaders});
+    }
+
+    return response;
+};
+
 function showView(view) {
     document.querySelectorAll(".view").forEach(e => e.classList.add("d-none"));
     document.getElementById("view-" + view).classList.remove("d-none");
@@ -216,26 +265,32 @@ function login() {
             password: document.getElementById("login-pass").value
         })
     })
-    .then(res => res.json())
-    .then(data => {
+    .then(async response => {
+        const data = await response.json();
+        return {response, data};
+    })
+    .then(({response, data}) => {
         if (data.status === "ok") {
+            setCsrfToken(data.csrf_token);
             currentUserId = data.user_id;
             applyRoleUi(data.role);
             document.getElementById("user-label").innerText = "Signed in as " + data.user + " (" + data.role + ")";
             showView("app");
             init();
         } else {
-            document.getElementById("login-error").innerText = data.message || "Invalid login";
+            const retry = data.retry_after ? ` Try again in ${Math.ceil(data.retry_after / 60)} minute(s).` : "";
+            document.getElementById("login-error").innerText = (data.message || "Invalid login") + retry;
         }
     })
     .catch(err => {
-        document.getElementById("login-error").innerText = err;
+        document.getElementById("login-error").innerText = err.message || err;
     });
 }
 
 function logout() {
-    fetch("/logout")
+    fetch("/logout", {method: "POST"})
         .then(() => {
+            setCsrfToken(null);
             currentUserId = null;
             applyRoleUi("viewer");
             document.getElementById("user-label").innerText = "";
@@ -776,7 +831,14 @@ function loadAudit() {
         .catch(error => showToast(error.message));
 }
 
+function userIsLocked(user) {
+    return Boolean(user.locked_until && new Date(user.locked_until) > new Date());
+}
+
 function userStatus(user) {
+    if (userIsLocked(user)) {
+        return '<span class="badge text-bg-danger">Locked</span>';
+    }
     if (user.enabled) return '<span class="badge text-bg-success">Enabled</span>';
     if (!user.last_login) return '<span class="badge text-bg-warning">Pending</span>';
     return '<span class="badge text-bg-secondary">Disabled</span>';
@@ -821,6 +883,7 @@ function loadUsers() {
                                 <td>${formatUserDate(user.created_at)}</td>
                                 <td>${formatUserDate(user.last_login)}</td>
                                 <td class="text-end">
+                                    ${userIsLocked(user) ? `<button class="btn btn-sm btn-warning" onclick="unlockUser(${user.id})">Unlock</button>` : ""}
                                     ${!user.enabled ? `<button class="btn btn-sm btn-success" onclick="approveUser(${user.id})">Approve</button>` : ""}
                                     ${user.enabled && user.id !== currentUserId ? `<button class="btn btn-sm btn-outline-secondary" onclick="disableUser(${user.id})">Disable</button>` : ""}
                                     ${user.id !== currentUserId ? `<button class="btn btn-sm btn-outline-danger" onclick="deleteUserAccount(${user.id}, '${user.username}')">Delete</button>` : ""}
@@ -839,6 +902,16 @@ function approveUser(userId) {
         .then(responseJson)
         .then(() => {
             showToast("Account approved");
+            loadUsers();
+        })
+        .catch(error => showToast(error.message));
+}
+
+function unlockUser(userId) {
+    fetch(`/users/${userId}/unlock`, {method: "POST"})
+        .then(responseJson)
+        .then(() => {
+            showToast("Account unlocked");
             loadUsers();
         })
         .catch(error => showToast(error.message));
@@ -894,11 +967,13 @@ function checkSession() {
                 showView("app");
                 init();
             } else {
+                setCsrfToken(null);
                 showView("login");
                 checkHealth();
             }
         })
         .catch(() => {
+            setCsrfToken(null);
             showView("login");
             checkHealth();
         });

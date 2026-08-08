@@ -3,6 +3,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from app.db import SessionLocal
 from app.models import User
 from app.security.permissions import require_admin
+from app.services.auth_security_service import clear_account_lockout
 from app.services.audit_service import write_audit_event
 from app.services.user_service import (
     VALID_ROLES, count_enabled_admins, delete_user, get_user_by_id, list_users,
@@ -88,6 +89,24 @@ def update_user_role(request: Request, user_id: int, payload: dict = Body(...), 
                           resource_type="user", resource_id=user_id,
                           details={"target_username": updated.username, "from": previous_role, "to": role})
         return {"status": "ok", "user": serialize_user(updated)}
+    finally:
+        db.close()
+
+
+@router.post("/{user_id}/unlock")
+def unlock_user(request: Request, user_id: int, current_user: User = Depends(require_admin)):
+    db, user = _required_user(user_id)
+    try:
+        clear_account_lockout(db, user)
+        write_audit_event(
+            request=request,
+            action="user.unlock",
+            actor=current_user,
+            resource_type="user",
+            resource_id=user_id,
+            details={"target_username": user.username},
+        )
+        return {"status": "ok", "user": serialize_user(user)}
     finally:
         db.close()
 
