@@ -45,6 +45,7 @@ function showTab(tab, btn) {
         loadVaultStatus();
     }
     if (tab === "users") loadUsers();
+    if (tab === "audit") loadAudit();
 }
 
 
@@ -707,6 +708,73 @@ function testVault() {
         });
 }
 
+
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function auditDetails(details) {
+    if (!details || Object.keys(details).length === 0) return "";
+    return escapeHtml(JSON.stringify(details));
+}
+
+function loadAudit() {
+    if (currentUserRole !== "admin") return;
+
+    const actor = document.getElementById("audit-actor")?.value.trim() || "";
+    const action = document.getElementById("audit-action")?.value.trim() || "";
+    const outcome = document.getElementById("audit-outcome")?.value || "";
+    const params = new URLSearchParams({limit: "200"});
+    if (actor) params.set("actor", actor);
+    if (action) params.set("action", action);
+    if (outcome) params.set("outcome", outcome);
+
+    fetch(`/audit?${params.toString()}`)
+        .then(responseJson)
+        .then(data => {
+            const container = document.getElementById("audit-table");
+            if (!data.events || data.events.length === 0) {
+                container.innerHTML = '<div class="alert alert-secondary mb-0">No audit events match the current filters.</div>';
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Actor</th>
+                            <th>Action</th>
+                            <th>Outcome</th>
+                            <th>Resource</th>
+                            <th>IP</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.events.map(event => `
+                            <tr>
+                                <td class="text-nowrap">${escapeHtml(formatUserDate(event.created_at))}</td>
+                                <td>${escapeHtml(event.actor_username || "system/unknown")}</td>
+                                <td><code>${escapeHtml(event.action)}</code></td>
+                                <td><span class="badge ${event.outcome === "success" ? "text-bg-success" : "text-bg-danger"}">${escapeHtml(event.outcome)}</span></td>
+                                <td>${escapeHtml(event.resource_type || "")}${event.resource_id ? `<br><code>${escapeHtml(event.resource_id)}</code>` : ""}</td>
+                                <td><code>${escapeHtml(event.ip_address || "")}</code></td>
+                                <td class="small"><code>${auditDetails(event.details)}</code></td>
+                            </tr>
+                        `).join("")}
+                    </tbody>
+                </table>
+            `;
+        })
+        .catch(error => showToast(error.message));
+}
 
 function userStatus(user) {
     if (user.enabled) return '<span class="badge text-bg-success">Enabled</span>';

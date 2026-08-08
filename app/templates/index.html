@@ -29,6 +29,7 @@
                 <button class="list-group-item list-group-item-action" onclick="showTab('runs', this)">Runs</button>
                 <button class="list-group-item list-group-item-action d-none" data-role="admin" onclick="showTab('settings', this)">Settings</button>
                 <button class="list-group-item list-group-item-action d-none" data-role="admin" onclick="showTab('users', this)">Users</button>
+                <button class="list-group-item list-group-item-action d-none" data-role="admin" onclick="showTab('audit', this)">Audit Log</button>
             </div>
         </aside>
 
@@ -324,6 +325,49 @@
                         <div class="card-body">
                             <div id="users-table" class="table-responsive">
                                 <div class="text-muted">Loading users...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div id="tab-audit" class="tab-section d-none">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h3 class="mb-0">Audit Log</h3>
+                            <div class="text-muted">Security and administrative activity recorded by the controller.</div>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="loadAudit()">Refresh</button>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <input id="audit-actor" class="form-control" placeholder="Filter actor username">
+                                </div>
+                                <div class="col-md-4">
+                                    <input id="audit-action" class="form-control" placeholder="Filter action (example: auth.login)">
+                                </div>
+                                <div class="col-md-3">
+                                    <select id="audit-outcome" class="form-select">
+                                        <option value="">All outcomes</option>
+                                        <option value="success">Success</option>
+                                        <option value="failure">Failure</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-1 d-grid">
+                                    <button class="btn btn-primary accent-btn" onclick="loadAudit()">Apply</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header fw-semibold">Recent Events</div>
+                        <div class="card-body">
+                            <div id="audit-table" class="table-responsive">
+                                <div class="text-muted">Loading audit events...</div>
                             </div>
                         </div>
                     </div>
